@@ -1,0 +1,59 @@
+<!-- Draws a DAG (Directed Acyclic Graph) based on the input steps -->
+<script lang="ts">
+  import "./dag.css";
+  import Connectors from "./connectors.svelte";
+  import StepWrapper from "./step-wrapper.svelte";
+  import { setContext } from "svelte";
+  import type { DagComponent, DagStructure } from "../../types";
+  import { cardData } from "../../store";
+  import { getFromPathSpec } from "../../utils";
+  import { currentStepContext } from "./constants.svelte";
+
+  export let componentData: DagComponent;
+
+  const { steps, start_step: startStep, end_step: endStep } = componentData.data;
+  let el: HTMLElement;
+  let dagStructure: DagStructure = {};
+
+
+  setContext(
+    currentStepContext,
+    getFromPathSpec($cardData?.metadata?.pathspec, "stepname")
+  );
+
+  let resizeTimeout: ReturnType<typeof setTimeout>;
+  const RESIZE_TIMEOUT = 100;
+  let resizing = false;
+
+  // Debounce the resizing so the processor doesn't get overloaded
+  const handleResize = (): void => {
+    resizing = true;
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      resizing = false;
+    }, RESIZE_TIMEOUT);
+  };
+</script>
+
+<svelte:window on:resize={handleResize} />
+
+<div
+  bind:this={el}
+  style="position: relative; line-height: 1"
+  data-component="dag"
+>
+  {#if startStep && steps?.[startStep]}
+    <StepWrapper
+      {steps}
+      stepName={startStep}
+      {startStep}
+      {endStep}
+      bind:dagStructure
+    />
+  {:else}
+    <p>No start step</p>
+  {/if}
+  {#if !resizing}
+    <Connectors {dagStructure} container={el} />
+  {/if}
+</div>
